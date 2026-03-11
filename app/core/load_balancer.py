@@ -34,7 +34,7 @@ async def resolve_route_and_key(
         key_stmt = (
             select(ApiKey)
             .where(ApiKey.provider_id == provider.id, ApiKey.enabled.is_(True))
-            .order_by(ApiKey.id.asc())
+            .order_by(ApiKey.weight.desc(), ApiKey.id.asc())
         )
         keys = list((await session.execute(key_stmt)).scalars().all())
         available = [

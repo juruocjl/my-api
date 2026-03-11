@@ -28,12 +28,14 @@ class ApiKeyCreate(BaseModel):
     key_name: str = Field(min_length=1, max_length=100)
     api_key: str = Field(min_length=1, max_length=500)
     balance: float = 0.0
+    weight: int = Field(default=1, ge=1, le=1_000_000)
     enabled: bool = True
 
 
 class ApiKeyUpdate(BaseModel):
     balance: float | None = None
     balance_delta: float | None = None
+    weight: int | None = Field(default=None, ge=1, le=1_000_000)
     enabled: bool | None = None
 
 
@@ -43,6 +45,7 @@ class ApiKeyOut(BaseModel):
     key_name: str
     enabled: bool
     balance: float
+    weight: int
     consecutive_failures: int
     cooldown_until: str | None
     last_error: str | None

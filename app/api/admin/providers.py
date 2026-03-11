@@ -26,6 +26,7 @@ def _to_api_key_out(key: ApiKey) -> ApiKeyOut:
         key_name=key.key_name,
         enabled=key.enabled,
         balance=key.balance,
+        weight=key.weight,
         consecutive_failures=key.consecutive_failures,
         cooldown_until=key.cooldown_until.isoformat() if key.cooldown_until else None,
         last_error=key.last_error,
@@ -102,7 +103,7 @@ async def add_provider_key(
 
 @router.get("/keys", response_model=list[ApiKeyOut])
 async def list_all_keys(session: AsyncSession = Depends(get_db_session)) -> list[ApiKeyOut]:
-    keys = list((await session.execute(select(ApiKey).order_by(ApiKey.id.asc()))).scalars().all())
+    keys = list((await session.execute(select(ApiKey).order_by(ApiKey.weight.desc(), ApiKey.id.asc()))).scalars().all())
     return [_to_api_key_out(item) for item in keys]
 
 
@@ -112,7 +113,13 @@ async def list_provider_keys(
     session: AsyncSession = Depends(get_db_session),
 ) -> list[ApiKeyOut]:
     keys = list(
-        (await session.execute(select(ApiKey).where(ApiKey.provider_id == provider_id).order_by(ApiKey.id.asc())))
+        (
+            await session.execute(
+                select(ApiKey)
+                .where(ApiKey.provider_id == provider_id)
+                .order_by(ApiKey.weight.desc(), ApiKey.id.asc())
+            )
+        )
         .scalars()
         .all()
     )

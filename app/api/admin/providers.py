@@ -24,7 +24,6 @@ def _to_api_key_out(key: ApiKey) -> ApiKeyOut:
         id=key.id,
         provider_id=key.provider_id,
         key_name=key.key_name,
-        weight=key.weight,
         enabled=key.enabled,
         balance=key.balance,
         consecutive_failures=key.consecutive_failures,

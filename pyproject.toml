@@ -1,6 +1,6 @@
 [project]
 name = "my-api-proxy"
-version = "0.1.3"
+version = "0.1.4"
 description = "OpenAI-compatible API proxy with multi-provider load balancing and usage billing"
 requires-python = ">=3.12,<3.13"
 dependencies = [

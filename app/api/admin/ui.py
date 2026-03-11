@@ -88,15 +88,14 @@ async def admin_ui() -> str:
         <div class="row">
           <div class="c3"><label>Provider ID</label><input id="k_provider_id" type="number" /></div>
           <div class="c3"><label>名称</label><input id="k_name" /></div>
-          <div class="c3"><label>权重</label><input id="k_weight" type="number" value="1" /></div>
-          <div class="c3"><label>初始余额</label><input id="k_balance" type="number" step="0.01" value="100" /></div>
+          <div class="c6"><label>初始余额</label><input id="k_balance" type="number" step="0.01" value="100" /></div>
         </div>
         <div class="row"><div class="c12"><label>API Key</label><input id="k_value" /></div></div>
         <button class="btn" onclick="addKey()">添加 Key</button>
         <button class="btn" onclick="listKeys()">加载全部 Key</button>
         <div id="keys_status" class="status"></div>
         <table>
-          <thead><tr><th>ID</th><th>Provider</th><th>名称</th><th>权重</th><th>余额</th><th>启用</th><th>失败次数</th><th>操作</th></tr></thead>
+          <thead><tr><th>ID</th><th>Provider</th><th>名称</th><th>余额</th><th>启用</th><th>失败次数</th><th>操作</th></tr></thead>
           <tbody id="keys_body"></tbody>
         </table>
       </section>
@@ -232,7 +231,6 @@ async def admin_ui() -> str:
           key_name: byId("k_name").value.trim(),
           api_key: byId("k_value").value.trim(),
           balance: Number(byId("k_balance").value || 0),
-          weight: Number(byId("k_weight").value || 1),
           enabled: true,
         })});
         await listKeys();
@@ -245,9 +243,9 @@ async def admin_ui() -> str:
         const data = await api(`/admin/providers/keys`);
         byId("keys_body").innerHTML = data.map((k) => `
           <tr>
-            <td>${k.id}</td><td>${k.provider_id}</td><td>${esc(k.key_name)}</td><td>${k.weight}</td><td>${k.balance.toFixed(6)}</td><td>${k.enabled}</td><td>${k.consecutive_failures}</td>
+            <td>${k.id}</td><td>${k.provider_id}</td><td>${esc(k.key_name)}</td><td>${k.balance.toFixed(6)}</td><td>${k.enabled}</td><td>${k.consecutive_failures}</td>
             <td class="ops">
-              <button class="btn btn-sm" onclick="editKey(${k.id}, ${k.weight}, ${k.enabled}, ${k.balance})">修改</button>
+              <button class="btn btn-sm" onclick="editKey(${k.id})">修改</button>
               <button class="btn btn-sm btn-danger" onclick="deleteKey(${k.id})">删除</button>
             </td>
           </tr>`).join("");
@@ -255,13 +253,11 @@ async def admin_ui() -> str:
       } catch (e) { setStatus("keys_status", e.message, false); }
     }
 
-    async function editKey(id, oldWeight, oldEnabled, oldBalance) {
+    async function editKey(id) {
       try {
-        const weightText = prompt("新权重", String(oldWeight)); if (weightText === null) return;
         const balanceDeltaText = prompt("余额增量(可正可负)", "0"); if (balanceDeltaText === null) return;
         const enabled = confirm("点击确定=启用，取消=禁用");
         await api(`/admin/providers/keys/${id}`, { method: "PATCH", body: JSON.stringify({
-          weight: Number(weightText),
           balance_delta: Number(balanceDeltaText),
           enabled,
         })});

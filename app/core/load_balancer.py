@@ -1,4 +1,3 @@
-import random
 from datetime import datetime, timedelta
 
 from sqlalchemy import select
@@ -32,7 +31,11 @@ async def resolve_route_and_key(
 
     now = datetime.utcnow()
     for route, provider in route_rows:
-        key_stmt = select(ApiKey).where(ApiKey.provider_id == provider.id, ApiKey.enabled.is_(True))
+        key_stmt = (
+            select(ApiKey)
+            .where(ApiKey.provider_id == provider.id, ApiKey.enabled.is_(True))
+            .order_by(ApiKey.id.asc())
+        )
         keys = list((await session.execute(key_stmt)).scalars().all())
         available = [
             k
@@ -42,11 +45,7 @@ async def resolve_route_and_key(
         if not available:
             continue
 
-        weighted_pool: list[ApiKey] = []
-        for key in available:
-            weighted_pool.extend([key] * max(key.weight, 1))
-
-        selected = random.choice(weighted_pool)
+        selected = available[0]
         return route, provider, selected
 
     raise NoAvailableKeyError(f"No available API key for model: {public_model}")

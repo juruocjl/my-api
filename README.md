@@ -10,7 +10,7 @@
   - POST /v1/embeddings
 - 多 Provider + 多 API Key
   - 按模型路由到不同 Provider
-  - 同一 Provider 下多个 Key 按权重负载
+  - 同一 Provider 下多个 Key 按创建顺序选择第一个余额大于 0 的可用 Key
   - 429/5xx 自动故障退避与冷却恢复
 - 计费逻辑
   - 每个模型独立配置 input、cached input、output 单价
@@ -66,14 +66,12 @@ Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8000/admin/providers -Conte
 Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8000/admin/providers/1/keys -ContentType "application/json" -Body '{
   "key_name": "k1",
   "api_key": "sk-xxx",
-  "weight": 2,
   "enabled": true
 }'
 
 Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8000/admin/providers/1/keys -ContentType "application/json" -Body '{
   "key_name": "k2",
   "api_key": "sk-yyy",
-  "weight": 1,
   "enabled": true
 }'
 ```

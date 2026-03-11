@@ -37,8 +37,10 @@ copy .env.example .env
 3. 启动服务
 
 ```powershell
-uv run uvicorn app.main:app --reload
+uv run python -m app.main
 ```
+
+- Host/Port/Reload 来自 `.env`：`APP_HOST`、`APP_PORT`、`APP_RELOAD`。
 
 4. 打开接口文档
 

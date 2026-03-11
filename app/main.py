@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import uvicorn
 from fastapi import FastAPI
 
 from app.api.admin.providers import router as admin_provider_router
@@ -37,3 +38,16 @@ app.include_router(admin_provider_router)
 app.include_router(admin_pricing_router)
 app.include_router(admin_stats_router)
 app.include_router(admin_ui_router)
+
+
+def run() -> None:
+    uvicorn.run(
+        "app.main:app",
+        host=settings.app_host,
+        port=settings.app_port,
+        reload=settings.app_reload,
+    )
+
+
+if __name__ == "__main__":
+    run()

@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     app_name: str = "my-api-proxy"
     app_host: str = "0.0.0.0"
     app_port: int = 8000
+    app_reload: bool = False
 
     database_url: str = "sqlite+aiosqlite:///./data/app.db"
 

@@ -1,0 +1,30 @@
+from datetime import date
+
+from pydantic import BaseModel
+
+
+class DailyUsageItem(BaseModel):
+    usage_date: date
+    public_model: str
+    provider_id: int
+    api_key_id: int
+    input_tokens: int
+    cached_input_tokens: int
+    output_tokens: int
+    total_cost: float
+    request_count: int
+    estimated_count: int
+
+
+class DailyUsageTotals(BaseModel):
+    input_tokens: int
+    cached_input_tokens: int
+    output_tokens: int
+    total_cost: float
+    request_count: int
+    estimated_count: int
+
+
+class DailyUsageResponse(BaseModel):
+    items: list[DailyUsageItem]
+    totals: DailyUsageTotals

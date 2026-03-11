@@ -1,0 +1,18 @@
+[project]
+name = "my-api-proxy"
+version = "0.1.1"
+description = "OpenAI-compatible API proxy with multi-provider load balancing and usage billing"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+	"aiosqlite==0.21.0",
+	"fastapi==0.116.1",
+	"httpx==0.28.1",
+	"pydantic-settings==2.10.1",
+	"python-dateutil==2.9.0.post0",
+	"sqlalchemy==2.0.43",
+	"tiktoken==0.11.0",
+	"uvicorn[standard]==0.35.0",
+]
+
+[tool.uv]
+package = false

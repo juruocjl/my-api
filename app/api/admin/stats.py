@@ -1,12 +1,12 @@
-from datetime import date
+from datetime import date, datetime, time
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db_session
-from app.models.entities import DailyUsageSummary
-from app.schemas.stats import DailyUsageItem, DailyUsageResponse, DailyUsageTotals
+from app.models.entities import DailyUsageSummary, UsageEvent
+from app.schemas.stats import DailyUsageItem, DailyUsageResponse, DailyUsageTotals, UsageEventItem, UsageEventResponse
 
 router = APIRouter(prefix="/admin/stats", tags=["admin-stats"])
 
@@ -57,3 +57,53 @@ async def get_daily_stats(
     )
 
     return DailyUsageResponse(items=items, totals=totals)
+
+
+@router.get("/events", response_model=UsageEventResponse)
+async def get_usage_events(
+    start_date: date = Query(...),
+    end_date: date = Query(...),
+    model: str | None = Query(default=None),
+    provider_id: int | None = Query(default=None),
+    key_id: int | None = Query(default=None),
+    limit: int = Query(default=200, ge=1, le=2000),
+    session: AsyncSession = Depends(get_db_session),
+) -> UsageEventResponse:
+    start_dt = datetime.combine(start_date, time.min)
+    end_dt = datetime.combine(end_date, time.max)
+
+    conds = [UsageEvent.created_at >= start_dt, UsageEvent.created_at <= end_dt]
+    if model:
+        conds.append(UsageEvent.public_model == model)
+    if provider_id is not None:
+        conds.append(UsageEvent.provider_id == provider_id)
+    if key_id is not None:
+        conds.append(UsageEvent.api_key_id == key_id)
+
+    stmt = (
+        select(UsageEvent)
+        .where(and_(*conds))
+        .order_by(UsageEvent.created_at.desc())
+        .limit(limit)
+    )
+    rows = list((await session.execute(stmt)).scalars().all())
+
+    items = [
+        UsageEventItem(
+            request_id=r.request_id,
+            created_at=r.created_at,
+            endpoint=r.endpoint,
+            public_model=r.public_model,
+            provider_id=r.provider_id,
+            api_key_id=r.api_key_id,
+            input_tokens=r.input_tokens,
+            cached_input_tokens=r.cached_input_tokens,
+            output_tokens=r.output_tokens,
+            total_cost=r.total_cost,
+            is_estimated=r.is_estimated,
+            latency_ms=r.latency_ms,
+        )
+        for r in rows
+    ]
+
+    return UsageEventResponse(items=items)

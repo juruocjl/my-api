@@ -144,7 +144,10 @@ async def admin_ui() -> str:
         <button class="btn" onclick="queryStats()">查询统计</button>
         <div id="stats_status" class="status"></div>
         <div style="margin:8px 0;">
-          <span id="total_tokens" class="pill">token: 0</span>
+          <span id="total_input_tokens" class="pill">input: 0</span>
+          <span id="total_cached_tokens" class="pill">cached: 0</span>
+          <span id="total_output_tokens" class="pill">output: 0</span>
+          <span id="total_tokens" class="pill">total token: 0</span>
           <span id="total_cost" class="pill">cost: 0</span>
           <span id="total_requests" class="pill">requests: 0</span>
           <span id="total_estimated" class="pill">estimated: 0</span>
@@ -152,6 +155,11 @@ async def admin_ui() -> str:
         <table>
           <thead><tr><th>Date</th><th>Model</th><th>Provider</th><th>Key</th><th>Input</th><th>Cached</th><th>Output</th><th>Cost</th><th>Req</th><th>Estimated</th></tr></thead>
           <tbody id="stats_body"></tbody>
+        </table>
+        <h4 style="margin:12px 0 6px;">访问明细（每次请求时间）</h4>
+        <table>
+          <thead><tr><th>Time</th><th>Request ID</th><th>Endpoint</th><th>Model</th><th>Provider</th><th>Key</th><th>Input</th><th>Cached</th><th>Output</th><th>Cost</th><th>Latency(ms)</th></tr></thead>
+          <tbody id="event_body"></tbody>
         </table>
       </section>
     </div>
@@ -394,7 +402,11 @@ async def admin_ui() -> str:
         if (byId("s_model").value.trim()) q.set("model", byId("s_model").value.trim());
         if (byId("s_provider_id").value) q.set("provider_id", byId("s_provider_id").value);
         const data = await api(`/admin/stats/daily?${q.toString()}`);
+        const events = await api(`/admin/stats/events?${q.toString()}`);
         const t = data.totals;
+        byId("total_input_tokens").textContent = `input: ${t.input_tokens}`;
+        byId("total_cached_tokens").textContent = `cached: ${t.cached_input_tokens}`;
+        byId("total_output_tokens").textContent = `output: ${t.output_tokens}`;
         byId("total_tokens").textContent = `token: ${t.input_tokens + t.cached_input_tokens + t.output_tokens}`;
         byId("total_cost").textContent = `cost: ${Number(t.total_cost).toFixed(6)}`;
         byId("total_requests").textContent = `requests: ${t.request_count}`;
@@ -403,6 +415,12 @@ async def admin_ui() -> str:
           <tr>
             <td>${i.usage_date}</td><td>${esc(i.public_model)}</td><td>${i.provider_id}</td><td>${i.api_key_id}</td>
             <td>${i.input_tokens}</td><td>${i.cached_input_tokens}</td><td>${i.output_tokens}</td><td>${Number(i.total_cost).toFixed(6)}</td><td>${i.request_count}</td><td>${i.estimated_count}</td>
+          </tr>`).join("");
+
+        byId("event_body").innerHTML = events.items.map((i) => `
+          <tr>
+            <td>${i.created_at}</td><td>${esc(i.request_id)}</td><td>${esc(i.endpoint)}</td><td>${esc(i.public_model)}</td><td>${i.provider_id}</td><td>${i.api_key_id}</td>
+            <td>${i.input_tokens}</td><td>${i.cached_input_tokens}</td><td>${i.output_tokens}</td><td>${Number(i.total_cost).toFixed(6)}</td><td>${i.latency_ms}</td>
           </tr>`).join("");
         setStatus("stats_status", "统计查询成功");
       } catch (e) { setStatus("stats_status", e.message, false); }

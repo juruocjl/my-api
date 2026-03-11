@@ -35,8 +35,14 @@ async def call_openai_compatible(
     }
 
     timeout = httpx.Timeout(settings.http_timeout_seconds)
-    async with httpx.AsyncClient(timeout=timeout) as client:
-        response = await client.post(f"{base_url.rstrip('/')}" + endpoint, json=body, headers=headers)
+    request_url = f"{base_url.rstrip('/')}" + endpoint
+    try:
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            response = await client.post(request_url, json=body, headers=headers)
+    except httpx.TimeoutException as exc:
+        raise UpstreamRequestError(status_code=504, message=f"upstream timeout: {request_url}") from exc
+    except httpx.RequestError as exc:
+        raise UpstreamRequestError(status_code=502, message=f"upstream request failed: {exc}") from exc
 
     try:
         data = response.json()

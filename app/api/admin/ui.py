@@ -169,9 +169,28 @@ async def admin_ui() -> str:
   </div>
 
   <script>
+    const ADMIN_TOKEN_KEY = "my_api_proxy_admin_token";
     const byId = (id) => document.getElementById(id);
     const esc = (s) => String(s ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
     const enc = (s) => encodeURIComponent(String(s ?? ""));
+
+    function resolveAdminToken() {
+      const fromQuery = new URLSearchParams(window.location.search).get("token");
+      if (fromQuery && fromQuery.trim()) {
+        localStorage.setItem(ADMIN_TOKEN_KEY, fromQuery.trim());
+        return fromQuery.trim();
+      }
+      const saved = localStorage.getItem(ADMIN_TOKEN_KEY);
+      return saved ? saved.trim() : "";
+    }
+
+    function promptAndSaveAdminToken() {
+      const token = prompt("请输入管理员 Token");
+      if (!token || !token.trim()) return "";
+      const normalized = token.trim();
+      localStorage.setItem(ADMIN_TOKEN_KEY, normalized);
+      return normalized;
+    }
 
     function formatUtcToLocal(value) {
       if (!value) return "";
@@ -206,7 +225,29 @@ async def admin_ui() -> str:
     }
 
     async function api(url, options = {}) {
-      const res = await fetch(url, { headers: { "Content-Type": "application/json" }, ...options });
+      let token = resolveAdminToken();
+      if (!token) {
+        token = promptAndSaveAdminToken();
+      }
+      if (!token) throw new Error("缺少管理员 Token");
+
+      const doRequest = async () => {
+        const mergedHeaders = {
+          "Content-Type": "application/json",
+          "X-Admin-Token": token,
+          ...(options.headers || {}),
+        };
+        return await fetch(url, { ...options, headers: mergedHeaders });
+      };
+
+      let res = await doRequest();
+      if (res.status === 401) {
+        localStorage.removeItem(ADMIN_TOKEN_KEY);
+        const refreshed = promptAndSaveAdminToken();
+        if (!refreshed) throw new Error("认证失败：未提供管理员 Token");
+        token = refreshed;
+        res = await doRequest();
+      }
       const text = await res.text();
       let data = {};
       try { data = text ? JSON.parse(text) : {}; } catch { data = { raw: text }; }
@@ -467,6 +508,7 @@ async def admin_ui() -> str:
     }
 
     (() => {
+      resolveAdminToken() || promptAndSaveAdminToken();
       const today = localDateForInput();
       byId("s_start").value = today;
       byId("s_end").value = today;

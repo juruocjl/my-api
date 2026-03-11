@@ -14,6 +14,8 @@ class Settings(BaseSettings):
     http_timeout_seconds: int = 120
     request_cooldown_base_seconds: int = 5
     request_cooldown_max_seconds: int = 300
+    client_api_keys: str = "change-me-client-key"
+    admin_token: str = "change-me"
 
     default_currency: str = "USD"
     default_price_unit_tokens: int = 1_000_000

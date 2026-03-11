@@ -47,3 +47,16 @@ class UsageEventItem(BaseModel):
 
 class UsageEventResponse(BaseModel):
     items: list[UsageEventItem]
+
+
+class TotalCostResponse(BaseModel):
+    start_date: date
+    end_date: date
+    total_cost: float
+
+
+class RemainingQuotaResponse(BaseModel):
+    total_balance: float
+    positive_balance: float
+    enabled_key_count: int
+    total_key_count: int

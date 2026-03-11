@@ -115,6 +115,12 @@ Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8000/v1/chat/completions -C
 
 ```powershell
 Invoke-RestMethod "http://127.0.0.1:8000/admin/stats/daily?start_date=2026-03-11&end_date=2026-03-11"
+
+# 仅查询区间总花费
+Invoke-RestMethod "http://127.0.0.1:8000/admin/stats/total-cost?start_date=2026-03-11&end_date=2026-03-11"
+
+# 查询全局剩余额度汇总
+Invoke-RestMethod "http://127.0.0.1:8000/admin/stats/remaining-quota"
 ```
 
 ## 管理接口示例
@@ -124,6 +130,8 @@ Invoke-RestMethod "http://127.0.0.1:8000/admin/stats/daily?start_date=2026-03-11
 - 新增模型路由: POST /admin/providers/routes
 - 配置模型计费: PUT /admin/pricing
 - 查询每日统计: GET /admin/stats/daily?start_date=2026-03-10&end_date=2026-03-11
+- 查询区间总花费: GET /admin/stats/total-cost?start_date=2026-03-10&end_date=2026-03-11
+- 查询剩余额度汇总: GET /admin/stats/remaining-quota
 
 ## 说明
 

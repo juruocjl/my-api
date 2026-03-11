@@ -93,6 +93,9 @@ async def admin_ui() -> str:
         <div class="row"><div class="c12"><label>API Key</label><input id="k_value" /></div></div>
         <button class="btn" onclick="addKey()">添加 Key</button>
         <button class="btn" onclick="listKeys()">加载全部 Key</button>
+        <div style="margin:8px 0;">
+          <span id="keys_total_balance" class="pill">总额度: 0.000000</span>
+        </div>
         <div id="keys_status" class="status"></div>
         <table>
           <thead><tr><th>ID</th><th>Provider</th><th>名称</th><th>余额</th><th>启用</th><th>失败次数</th><th>操作</th></tr></thead>
@@ -249,6 +252,7 @@ async def admin_ui() -> str:
     async function listKeys() {
       try {
         const data = await api(`/admin/providers/keys`);
+        const totalBalance = data.reduce((sum, k) => sum + Number(k.balance || 0), 0);
         byId("keys_body").innerHTML = data.map((k) => `
           <tr>
             <td>${k.id}</td><td>${k.provider_id}</td><td>${esc(k.key_name)}</td><td>${k.balance.toFixed(6)}</td><td>${k.enabled}</td><td>${k.consecutive_failures}</td>
@@ -257,6 +261,7 @@ async def admin_ui() -> str:
               <button class="btn btn-sm btn-danger" onclick="deleteKey(${k.id})">删除</button>
             </td>
           </tr>`).join("");
+        byId("keys_total_balance").textContent = `总额度: ${totalBalance.toFixed(6)}`;
         setStatus("keys_status", "全部 Key 已刷新");
       } catch (e) { setStatus("keys_status", e.message, false); }
     }

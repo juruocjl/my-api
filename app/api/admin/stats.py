@@ -1,6 +1,6 @@
 from datetime import date, datetime, time
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -119,13 +119,36 @@ async def get_usage_events(
 
 @router.get("/total-cost", response_model=TotalCostResponse)
 async def get_total_cost(
-    start_date: date = Query(...),
-    end_date: date = Query(...),
+    start_date: date | None = Query(default=None),
+    end_date: date | None = Query(default=None),
+    start_time: datetime | None = Query(default=None),
+    end_time: datetime | None = Query(default=None),
     model: str | None = Query(default=None),
     provider_id: int | None = Query(default=None),
     key_id: int | None = Query(default=None),
     session: AsyncSession = Depends(get_db_session),
 ) -> TotalCostResponse:
+    using_datetime = start_time is not None or end_time is not None
+
+    if using_datetime:
+        if start_time is None or end_time is None:
+            raise HTTPException(status_code=422, detail="start_time 和 end_time 需要同时提供")
+        conds = [UsageEvent.created_at >= start_time, UsageEvent.created_at <= end_time]
+        if model:
+            conds.append(UsageEvent.public_model == model)
+        if provider_id is not None:
+            conds.append(UsageEvent.provider_id == provider_id)
+        if key_id is not None:
+            conds.append(UsageEvent.api_key_id == key_id)
+
+        stmt = select(UsageEvent.total_cost).where(and_(*conds))
+        costs = (await session.execute(stmt)).scalars().all()
+        total_cost = float(sum(costs))
+        return TotalCostResponse(start_time=start_time, end_time=end_time, total_cost=total_cost)
+
+    if start_date is None or end_date is None:
+        raise HTTPException(status_code=422, detail="请提供 start_date/end_date，或 start_time/end_time")
+
     conds = [DailyUsageSummary.usage_date >= start_date, DailyUsageSummary.usage_date <= end_date]
     if model:
         conds.append(DailyUsageSummary.public_model == model)
@@ -137,7 +160,6 @@ async def get_total_cost(
     stmt = select(DailyUsageSummary.total_cost).where(and_(*conds))
     costs = (await session.execute(stmt)).scalars().all()
     total_cost = float(sum(costs))
-
     return TotalCostResponse(start_date=start_date, end_date=end_date, total_cost=total_cost)
 
 

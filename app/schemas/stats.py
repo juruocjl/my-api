@@ -50,8 +50,10 @@ class UsageEventResponse(BaseModel):
 
 
 class TotalCostResponse(BaseModel):
-    start_date: date
-    end_date: date
+    start_date: date | None = None
+    end_date: date | None = None
+    start_time: datetime | None = None
+    end_time: datetime | None = None
     total_cost: float
 
 

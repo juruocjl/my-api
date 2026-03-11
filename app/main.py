@@ -1,4 +1,5 @@
 from pathlib import Path
+from contextlib import asynccontextmanager
 
 import uvicorn
 from fastapi import FastAPI
@@ -12,11 +13,8 @@ from app.core.config import settings
 from app.core.database import Base, engine, ensure_sqlite_compatibility
 
 
-app = FastAPI(title=settings.app_name)
-
-
-@app.on_event("startup")
-async def on_startup() -> None:
+@asynccontextmanager
+async def lifespan(_: FastAPI):
     if settings.database_url.startswith("sqlite"):
         db_path = settings.database_url.split("///", maxsplit=1)[-1]
         if db_path and db_path != ":memory:":
@@ -26,6 +24,11 @@ async def on_startup() -> None:
         await conn.run_sync(Base.metadata.create_all)
 
     await ensure_sqlite_compatibility()
+
+    yield
+
+
+app = FastAPI(title=settings.app_name, lifespan=lifespan)
 
 
 @app.get("/health")

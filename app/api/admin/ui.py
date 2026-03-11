@@ -177,11 +177,20 @@ async def admin_ui() -> str:
       if (!value) return "";
       const raw = String(value).trim();
       if (!raw) return "";
-      const hasTimezone = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(raw);
-      const normalized = hasTimezone ? raw : `${raw}Z`;
+      const isoLike = raw.replace(/\s+/, "T");
+      const hasTimezone = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(isoLike);
+      const normalized = hasTimezone ? isoLike : `${isoLike}Z`;
       const dt = new Date(normalized);
       if (Number.isNaN(dt.getTime())) return raw;
-      return dt.toLocaleString("zh-CN", { hour12: false });
+      return dt.toLocaleString("zh-CN", {
+        hour12: false,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      });
     }
 
     function localDateForInput() {

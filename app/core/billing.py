@@ -19,8 +19,9 @@ class PricingConfig:
 
 def calculate_cost(usage: TokenUsage, pricing: PricingConfig) -> float:
     divisor = max(pricing.unit_tokens, 1)
+    billable_input_tokens = max(usage.input_tokens - usage.cached_input_tokens, 0)
     return (
-        usage.input_tokens * pricing.input_unit_price
+        billable_input_tokens * pricing.input_unit_price
         + usage.cached_input_tokens * pricing.cached_input_unit_price
         + usage.output_tokens * pricing.output_unit_price
     ) / divisor

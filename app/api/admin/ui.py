@@ -173,6 +173,23 @@ async def admin_ui() -> str:
     const esc = (s) => String(s ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
     const enc = (s) => encodeURIComponent(String(s ?? ""));
 
+    function formatUtcToLocal(value) {
+      if (!value) return "";
+      const raw = String(value).trim();
+      if (!raw) return "";
+      const hasTimezone = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(raw);
+      const normalized = hasTimezone ? raw : `${raw}Z`;
+      const dt = new Date(normalized);
+      if (Number.isNaN(dt.getTime())) return raw;
+      return dt.toLocaleString("zh-CN", { hour12: false });
+    }
+
+    function localDateForInput() {
+      const now = new Date();
+      const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
+      return local.toISOString().slice(0, 10);
+    }
+
     function setStatus(id, msg, ok = true) {
       const el = byId(id);
       el.className = `status ${ok ? "ok" : "err"}`;
@@ -424,7 +441,7 @@ async def admin_ui() -> str:
 
         byId("event_body").innerHTML = events.items.map((i) => `
           <tr>
-            <td>${i.created_at}</td><td>${esc(i.request_id)}</td><td>${esc(i.endpoint)}</td><td>${esc(i.public_model)}</td><td>${i.provider_id}</td><td>${i.api_key_id}</td>
+            <td>${formatUtcToLocal(i.created_at)}</td><td>${esc(i.request_id)}</td><td>${esc(i.endpoint)}</td><td>${esc(i.public_model)}</td><td>${i.provider_id}</td><td>${i.api_key_id}</td>
             <td>${i.input_tokens}</td><td>${i.cached_input_tokens}</td><td>${i.output_tokens}</td><td>${Number(i.total_cost).toFixed(6)}</td><td>${i.latency_ms}</td>
           </tr>`).join("");
         setStatus("stats_status", "统计查询成功");
@@ -441,7 +458,7 @@ async def admin_ui() -> str:
     }
 
     (() => {
-      const today = new Date().toISOString().slice(0, 10);
+      const today = localDateForInput();
       byId("s_start").value = today;
       byId("s_end").value = today;
       refreshAll();

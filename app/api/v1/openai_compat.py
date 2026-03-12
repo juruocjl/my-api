@@ -1,6 +1,5 @@
 import time
 import uuid
-from datetime import datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -15,6 +14,7 @@ from app.core.load_balancer import (
     mark_key_success,
     resolve_route_and_key,
 )
+from app.core.timezone import business_today
 from app.core.token_counter import parse_usage_from_upstream
 from app.models.entities import ModelRoute
 from app.services.provider_client import UpstreamRequestError, call_openai_compatible
@@ -87,7 +87,7 @@ async def _proxy_request(endpoint: str, request: Request, session: AsyncSession)
         session,
         request_id=request_id,
         endpoint=endpoint,
-        usage_date=datetime.utcnow().date(),
+        usage_date=business_today(),
         public_model=public_model,
         provider_id=provider.id,
         api_key_id=key.id,

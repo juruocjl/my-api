@@ -1,11 +1,13 @@
-from datetime import date, datetime, time
+from collections import defaultdict
+from datetime import date, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db_session
-from app.models.entities import ApiKey, DailyUsageSummary, UsageEvent
+from app.core.timezone import local_date_range_to_utc_naive, local_datetime_to_utc_naive, utc_naive_to_business
+from app.models.entities import ApiKey, UsageEvent
 from app.schemas.stats import (
     DailyUsageItem,
     DailyUsageResponse,
@@ -28,31 +30,54 @@ async def get_daily_stats(
     key_id: int | None = Query(default=None),
     session: AsyncSession = Depends(get_db_session),
 ) -> DailyUsageResponse:
-    conds = [DailyUsageSummary.usage_date >= start_date, DailyUsageSummary.usage_date <= end_date]
+    start_dt, end_dt = local_date_range_to_utc_naive(start_date, end_date)
+    conds = [UsageEvent.created_at >= start_dt, UsageEvent.created_at <= end_dt]
     if model:
-        conds.append(DailyUsageSummary.public_model == model)
+        conds.append(UsageEvent.public_model == model)
     if provider_id is not None:
-        conds.append(DailyUsageSummary.provider_id == provider_id)
+        conds.append(UsageEvent.provider_id == provider_id)
     if key_id is not None:
-        conds.append(DailyUsageSummary.api_key_id == key_id)
+        conds.append(UsageEvent.api_key_id == key_id)
 
-    stmt = select(DailyUsageSummary).where(and_(*conds)).order_by(DailyUsageSummary.usage_date.asc())
+    stmt = select(UsageEvent).where(and_(*conds)).order_by(UsageEvent.created_at.asc())
     rows = list((await session.execute(stmt)).scalars().all())
+
+    grouped: dict[tuple[date, str, int, int], dict[str, int | float | date | str]] = defaultdict(
+        lambda: {
+            "input_tokens": 0,
+            "cached_input_tokens": 0,
+            "output_tokens": 0,
+            "total_cost": 0.0,
+            "request_count": 0,
+            "estimated_count": 0,
+        }
+    )
+
+    for row in rows:
+        business_date = utc_naive_to_business(row.created_at).date()
+        group_key = (business_date, row.public_model, row.provider_id, row.api_key_id)
+        bucket = grouped[group_key]
+        bucket["input_tokens"] += row.input_tokens
+        bucket["cached_input_tokens"] += row.cached_input_tokens
+        bucket["output_tokens"] += row.output_tokens
+        bucket["total_cost"] += row.total_cost
+        bucket["request_count"] += 1
+        bucket["estimated_count"] += 1 if row.is_estimated else 0
 
     items = [
         DailyUsageItem(
-            usage_date=r.usage_date,
-            public_model=r.public_model,
-            provider_id=r.provider_id,
-            api_key_id=r.api_key_id,
-            input_tokens=r.input_tokens,
-            cached_input_tokens=r.cached_input_tokens,
-            output_tokens=r.output_tokens,
-            total_cost=r.total_cost,
-            request_count=r.request_count,
-            estimated_count=r.estimated_count,
+            usage_date=usage_date,
+            public_model=public_model,
+            provider_id=provider_id_value,
+            api_key_id=key_id_value,
+            input_tokens=int(bucket["input_tokens"]),
+            cached_input_tokens=int(bucket["cached_input_tokens"]),
+            output_tokens=int(bucket["output_tokens"]),
+            total_cost=float(bucket["total_cost"]),
+            request_count=int(bucket["request_count"]),
+            estimated_count=int(bucket["estimated_count"]),
         )
-        for r in rows
+        for (usage_date, public_model, provider_id_value, key_id_value), bucket in sorted(grouped.items())
     ]
 
     totals = DailyUsageTotals(
@@ -77,8 +102,7 @@ async def get_usage_events(
     limit: int = Query(default=200, ge=1, le=2000),
     session: AsyncSession = Depends(get_db_session),
 ) -> UsageEventResponse:
-    start_dt = datetime.combine(start_date, time.min)
-    end_dt = datetime.combine(end_date, time.max)
+    start_dt, end_dt = local_date_range_to_utc_naive(start_date, end_date)
 
     conds = [UsageEvent.created_at >= start_dt, UsageEvent.created_at <= end_dt]
     if model:
@@ -133,7 +157,9 @@ async def get_total_cost(
     if using_datetime:
         if start_time is None or end_time is None:
             raise HTTPException(status_code=422, detail="start_time 和 end_time 需要同时提供")
-        conds = [UsageEvent.created_at >= start_time, UsageEvent.created_at <= end_time]
+        start_dt = local_datetime_to_utc_naive(start_time)
+        end_dt = local_datetime_to_utc_naive(end_time)
+        conds = [UsageEvent.created_at >= start_dt, UsageEvent.created_at <= end_dt]
         if model:
             conds.append(UsageEvent.public_model == model)
         if provider_id is not None:
@@ -149,15 +175,16 @@ async def get_total_cost(
     if start_date is None or end_date is None:
         raise HTTPException(status_code=422, detail="请提供 start_date/end_date，或 start_time/end_time")
 
-    conds = [DailyUsageSummary.usage_date >= start_date, DailyUsageSummary.usage_date <= end_date]
+    start_dt, end_dt = local_date_range_to_utc_naive(start_date, end_date)
+    conds = [UsageEvent.created_at >= start_dt, UsageEvent.created_at <= end_dt]
     if model:
-        conds.append(DailyUsageSummary.public_model == model)
+        conds.append(UsageEvent.public_model == model)
     if provider_id is not None:
-        conds.append(DailyUsageSummary.provider_id == provider_id)
+        conds.append(UsageEvent.provider_id == provider_id)
     if key_id is not None:
-        conds.append(DailyUsageSummary.api_key_id == key_id)
+        conds.append(UsageEvent.api_key_id == key_id)
 
-    stmt = select(DailyUsageSummary.total_cost).where(and_(*conds))
+    stmt = select(UsageEvent.total_cost).where(and_(*conds))
     costs = (await session.execute(stmt)).scalars().all()
     total_cost = float(sum(costs))
     return TotalCostResponse(start_date=start_date, end_date=end_date, total_cost=total_cost)

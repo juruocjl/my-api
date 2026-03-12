@@ -19,6 +19,7 @@ class Settings(BaseSettings):
 
     default_currency: str = "USD"
     default_price_unit_tokens: int = 1_000_000
+    business_timezone: str = "Asia/Shanghai"
 
 
 settings = Settings()

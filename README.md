@@ -44,6 +44,7 @@ uv run python -m app.main
 - Host/Port/Reload 来自 `.env`：`APP_HOST`、`APP_PORT`、`APP_RELOAD`。
 - LLM 接口认证 Key 来自 `.env`：`CLIENT_API_KEYS`（多个 Key 用英文逗号分隔）。
 - 管理接口认证 Token 来自 `.env`：`ADMIN_TOKEN`。
+- 统计口径时区来自 `.env`：`BUSINESS_TIMEZONE`，默认是 `Asia/Shanghai`。
 
 4. 打开接口文档
 
